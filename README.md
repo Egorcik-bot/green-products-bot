@@ -50,6 +50,7 @@ scanner_project/
 ├── database.py        # Async SQLite manager, in-place schema migrations, quotas, referrals & exports
 ├── texts.py           # Strict 4-language localization dictionary (English, Romanian, Russian, Ukrainian)
 ├── test_upgrade.py    # 48-assertion automated end-to-end test suite (offline, zero token cost)
+├── assets/            # Telegram UI screenshots for portfolio showcase
 ├── requirements.txt   # Production Python dependencies
 ├── .env.example       # Template for required environment variables
 └── .gitignore         # Excludes secrets (.env), virtualenvs, and local SQLite databases (*.db)
@@ -59,11 +60,10 @@ scanner_project/
 
 ## 📸 Screenshots
 
-> _Drop 2–3 Telegram screenshots here to showcase the UI:_
-
-| 🔬 Traffic-Light Scan Report | ⚖️ 2-Product Comparison & Safety Modes | 🛠️ Admin Dashboard & Stars Checkout |
-| :---: | :---: | :---: |
-| `docs/screenshot_report.png` | `docs/screenshot_compare.png` | `docs/screenshot_admin.png` |
+| 🌍 1. Multilingual Onboarding | 📸 2. Photo & INCI Submission | 🔬 3. Traffic-Light Safety Report | 🛠️ 4. Admin Dashboard & Stats |
+| :---: | :---: | :---: | :---: |
+| <img src="assets/initial_setup.png" width="260" alt="Multilingual Onboarding & Allergy Setup" /> | <img src="assets/photo_delivery.png" width="260" alt="Photo & Text INCI Submission" /> | <img src="assets/scan_report.png" width="260" alt="Traffic-Light INCI Safety Report" /> | <img src="assets/admin_panel.png" width="260" alt="Interactive Admin Panel & Analytics" /> |
+| _4-language selection (`RO`, `EN`, `RU`, `UK`), personal allergy setup & persistent menu_ | _Instant in-memory photo capture or pasted INCI text from online pharmacies_ | _Deterministic `0–100` score bar, flagged risks, safe ingredients & opt-in Q&A / alternatives_ | _Live user/scan metrics, language breakdown, Stars revenue, CSV export & broadcasts_ |
 
 ---
 
