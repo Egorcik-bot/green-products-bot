@@ -335,6 +335,14 @@ class AdminBroadcast(StatesGroup):
     confirming = State()
 
 
+class SupportStates(StatesGroup):
+    waiting_message = State()
+
+
+class AdminReplyStates(StatesGroup):
+    waiting_reply = State()
+
+
 LANGUAGES = {
     "en": "English 🇬🇧",
     "ro": "Română 🇷🇴",
@@ -382,6 +390,7 @@ def settings_keyboard(lang: str, modes: Optional[dict] = None) -> InlineKeyboard
         rows.append([
             InlineKeyboardButton(text=f"{icon} {t(lang, col)}", callback_data=f"mode:{col}")
         ])
+    rows.append([InlineKeyboardButton(text=t(lang, "btn_support"), callback_data="support:start")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -424,6 +433,25 @@ def admin_dashboard_keyboard() -> InlineKeyboardMarkup:
 def admin_cancel_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="❌ Cancel", callback_data="admin:cancel")],
+    ])
+
+
+def support_keyboard(lang: str) -> InlineKeyboardMarkup:
+    """Single 'Support / Report Bug' button (kept out of the main ReplyKeyboard)."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t(lang, "btn_support"), callback_data="support:start")],
+    ])
+
+
+def support_cancel_keyboard(lang: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t(lang, "btn_cancel"), callback_data="support:cancel")],
+    ])
+
+
+def admin_reply_keyboard(user_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="↩️ Reply to user", callback_data=f"admin_reply:{user_id}")],
     ])
 
 
@@ -475,6 +503,7 @@ async def set_bot_commands(bot: Bot):
             BotCommand(command="history", description=t(code, "cmd_history")),
             BotCommand(command="buy", description=t(code, "cmd_buy")),
             BotCommand(command="settings", description=t(code, "cmd_settings")),
+            BotCommand(command="support", description=t(code, "cmd_support")),
         ]
         if code == DEFAULT_LANG:
             await bot.set_my_commands(commands)
@@ -698,7 +727,7 @@ async def cmd_profile(message: Message, state: FSMContext, bot: Bot):
             referrals=profile["referrals_count"],
             ref_link=ref_link,
         ),
-        reply_markup=main_menu_keyboard(lang),
+        reply_markup=support_keyboard(lang),
     )
 
 
@@ -1236,6 +1265,123 @@ async def cb_admin_broadcast_confirm(callback: CallbackQuery, state: FSMContext,
     )
 
 
+# --- Anonymous Support / Bug Report relay ---------------------------------
+SUPPORT_MAX_LEN = 3000
+TELEGRAM_CAPTION_MAX_LEN = 1024
+
+
+def fit_escaped(text: str, room: int) -> str:
+    """HTML-escapes `text`, cutting it (never mid-entity) so the escaped result fits `room` characters."""
+    if room <= 0:
+        return ""
+    out: list[str] = []
+    size = 0
+    for ch in text:
+        piece = html.escape(ch, quote=False)
+        if size + len(piece) > room - 1:
+            out.append("…")
+            break
+        out.append(piece)
+        size += len(piece)
+    return "".join(out)
+
+
+async def start_support(target: Message, user_id: int, state: FSMContext):
+    """Enters the support FSM state and asks the user to describe the problem (text or photo)."""
+    lang = await get_lang(user_id)
+    await state.clear()
+    if ADMIN_ID is None:
+        await target.answer(t(lang, "support_unavailable"), reply_markup=main_menu_keyboard(lang))
+        return
+    await state.set_state(SupportStates.waiting_message)
+    await target.answer(t(lang, "support_prompt"), reply_markup=support_cancel_keyboard(lang))
+
+
+async def relay_support_message(message: Message, state: FSMContext, bot: Bot):
+    """
+    Forwards a user's text / photo report to ADMIN_ID. The user stays anonymous towards the admin's
+    identity (they only get a confirmation), and the FSM state is left immediately to prevent spam.
+    """
+    await state.clear()
+    user = message.from_user
+    lang = await get_lang(user.id)
+    if ADMIN_ID is None:
+        await message.answer(t(lang, "support_unavailable"), reply_markup=main_menu_keyboard(lang))
+        return
+
+    is_photo = bool(message.photo)
+    body = ((message.caption if is_photo else message.text) or "").strip()[:SUPPORT_MAX_LEN]
+    username = f"@{esc(user.username)}" if user.username else "—"
+    header = (
+        "🆘 <b>Support request</b>\n"
+        f"👤 {esc(user.first_name or 'User', 64)} · {username}\n"
+        f"🆔 <code>{user.id}</code> · 🌐 {lang.upper()}"
+    )
+    markup = admin_reply_keyboard(user.id)
+    try:
+        if is_photo:
+            caption = header
+            if body:
+                caption += "\n\n" + fit_escaped(body, TELEGRAM_CAPTION_MAX_LEN - len(header) - 2)
+            await bot.send_photo(
+                ADMIN_ID, message.photo[-1].file_id,
+                caption=caption, parse_mode=ParseMode.HTML, reply_markup=markup,
+            )
+        else:
+            quote = f"<blockquote>{fit_escaped(body, TELEGRAM_MAX_LEN - len(header) - 40)}</blockquote>"
+            await bot.send_message(
+                ADMIN_ID, f"{header}\n\n{quote}", parse_mode=ParseMode.HTML, reply_markup=markup
+            )
+    except Exception:
+        logging.exception("Failed to relay support message to admin")
+        await message.answer(t(lang, "support_error"), reply_markup=main_menu_keyboard(lang))
+        return
+    await message.answer(t(lang, "support_sent"), reply_markup=main_menu_keyboard(lang))
+
+
+@router.message(Command("support"))
+async def cmd_support(message: Message, state: FSMContext):
+    await start_support(message, message.from_user.id, state)
+
+
+@router.callback_query(F.data == "support:start")
+async def cb_support_start(callback: CallbackQuery, state: FSMContext):
+    await start_support(callback.message, callback.from_user.id, state)
+    await callback.answer()
+
+
+@router.callback_query(F.data == "support:cancel")
+async def cb_support_cancel(callback: CallbackQuery, state: FSMContext):
+    lang = await get_lang(callback.from_user.id)
+    await state.clear()
+    try:
+        await callback.message.edit_reply_markup(reply_markup=None)
+    except TelegramBadRequest:
+        pass
+    await callback.message.answer(t(lang, "support_cancelled"), reply_markup=main_menu_keyboard(lang))
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("admin_reply:"))
+async def cb_admin_reply(callback: CallbackQuery, state: FSMContext):
+    """Admin taps '↩️ Reply to user' under a support request (strictly ADMIN_ID only)."""
+    if not is_admin(callback.from_user.id):
+        await callback.answer()
+        return
+    try:
+        target_id = int(callback.data.split(":", 1)[1])
+    except ValueError:
+        await callback.answer()
+        return
+    await state.set_state(AdminReplyStates.waiting_reply)
+    await state.update_data(target_user_id=target_id)
+    await callback.message.answer(
+        f"↩️ <b>Reply to user</b> <code>{target_id}</code>\nSend your reply as text:",
+        reply_markup=admin_cancel_keyboard(),
+    )
+    await callback.answer()
+
+
 @router.callback_query()
 async def cb_stale(callback: CallbackQuery):
     """Stops the loading spinner for buttons from an expired flow (e.g. after a restart)."""
@@ -1400,6 +1546,61 @@ async def msg_admin_broadcast_preview(message: Message, state: FSMContext):
         f"<blockquote>{esc(text, 3500)}</blockquote>\n\nSend now?",
         reply_markup=kb,
     )
+
+
+# --- Support relay FSM handlers (MUST stay before the photo & INCI-text scan handlers) ---
+@router.message(SupportStates.waiting_message, F.photo)
+async def msg_support_photo(message: Message, state: FSMContext, bot: Bot):
+    await relay_support_message(message, state, bot)
+
+
+@router.message(SupportStates.waiting_message, F.text)
+async def msg_support_text(message: Message, state: FSMContext, bot: Bot):
+    await relay_support_message(message, state, bot)
+
+
+@router.message(SupportStates.waiting_message)
+async def msg_support_invalid(message: Message):
+    """Stickers, voice, etc. while waiting for the support message."""
+    lang = await get_lang(message.from_user.id)
+    await message.answer(t(lang, "support_send_text"), reply_markup=support_cancel_keyboard(lang))
+
+
+@router.message(AdminReplyStates.waiting_reply, F.text)
+async def msg_admin_reply(message: Message, state: FSMContext, bot: Bot):
+    """Delivers the admin's reply to the user who sent the support request."""
+    if not is_admin(message.from_user.id):
+        await state.clear()
+        return
+    data = await state.get_data()
+    target_id = data.get("target_user_id")
+    await state.clear()
+    if not target_id:
+        return
+    target_lang = await get_lang(target_id)
+    reply_text = fit_escaped(message.text.strip(), TELEGRAM_MAX_LEN - 200)
+    try:
+        await bot.send_message(
+            target_id,
+            f"{t(target_lang, 'support_reply_header')}\n\n{reply_text}",
+            parse_mode=ParseMode.HTML,
+        )
+    except (TelegramForbiddenError, TelegramBadRequest):
+        await message.answer(
+            f"⚠️ Could not deliver the reply to <code>{target_id}</code> (user blocked the bot or the chat is unavailable).",
+            reply_markup=admin_dashboard_keyboard(),
+        )
+        return
+    await message.answer(
+        f"✅ Reply delivered to <code>{target_id}</code>.", reply_markup=admin_dashboard_keyboard()
+    )
+
+
+@router.message(AdminReplyStates.waiting_reply)
+async def msg_admin_reply_invalid(message: Message):
+    if not is_admin(message.from_user.id):
+        return
+    await message.answer("✍️ Please send your reply as text, or press Cancel.", reply_markup=admin_cancel_keyboard())
 
 
 # =========================================================

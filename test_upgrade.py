@@ -1,5 +1,5 @@
 """
-Automated 48-assertion end-to-end test suite for the Ingredient Scanner Telegram Bot.
+Automated 74-assertion end-to-end test suite for the Ingredient Scanner Telegram Bot.
 Mocks OpenAI and Telegram Bot API sessions so all tests run offline at zero token cost.
 
 Run with:
@@ -8,6 +8,7 @@ Run with:
 import asyncio
 import itertools
 import os
+import shutil
 import sqlite3
 import tempfile
 from datetime import datetime
@@ -20,6 +21,7 @@ os.environ.setdefault("ADMIN_ID", "777")
 
 import analyzer
 import bot as app
+import database
 from aiogram import Bot, Dispatcher
 from aiogram.client.session.base import BaseSession
 from aiogram.exceptions import TelegramForbiddenError
@@ -80,7 +82,7 @@ class FakeSession(BaseSession):
         name = type(method).__name__
         if name == "SendMessage" and getattr(method, "chat_id", None) in self.blocked_users:
             raise TelegramForbiddenError(method=method, message="Forbidden: bot was blocked by the user")
-        if name in ("SendMessage", "EditMessageText", "SendInvoice", "SendDocument"):
+        if name in ("SendMessage", "EditMessageText", "SendInvoice", "SendDocument", "SendPhoto"):
             return Message(
                 message_id=next(self._ids),
                 date=datetime.now(),
@@ -102,7 +104,7 @@ class FakeSession(BaseSession):
 _ids = itertools.count(1)
 
 
-def msg_dict(text=None, photo=False, uid=42, username=None, first_name="Alice", payment=None):
+def msg_dict(text=None, photo=False, uid=42, username=None, first_name="Alice", payment=None, caption=None):
     if username is None:
         username = "referee200" if uid == 200 else f"user{uid}"
     d = {
@@ -117,14 +119,17 @@ def msg_dict(text=None, photo=False, uid=42, username=None, first_name="Alice", 
             d["entities"] = [{"type": "bot_command", "offset": 0, "length": len(text.split()[0])}]
     if photo:
         d["photo"] = [{"file_id": "p1", "file_unique_id": "pu", "width": 10, "height": 10}]
+        if caption:
+            d["caption"] = caption
     if payment:
         d["successful_payment"] = payment
     return d
 
 
-async def say(dp, bot, text=None, photo=False, uid=42, username=None, first_name="Alice", payment=None):
+async def say(dp, bot, text=None, photo=False, uid=42, username=None, first_name="Alice", payment=None, caption=None):
     await dp.feed_raw_update(
-        bot, {"update_id": next(_ids), "message": msg_dict(text, photo, uid, username, first_name, payment)}
+        bot,
+        {"update_id": next(_ids), "message": msg_dict(text, photo, uid, username, first_name, payment, caption)},
     )
 
 
@@ -464,6 +469,146 @@ async def main():
         "broadcast completes cleanly with blocked user counted in Failed/Blocked",
         "Broadcast Complete" in bc_report and "Failed/Blocked: <b>1</b>" in bc_report,
     )
+
+    # 6. Anonymous Support / Bug Report relay
+    await app.set_bot_commands(bot)
+    menu_calls = [m for m in sess.calls if type(m).__name__ == "SetMyCommands"][-5:]
+    check(
+        "/support registered in the native command menu (default + 4 languages)",
+        len(menu_calls) == 5 and all("support" in [c.command for c in m.commands] for m in menu_calls),
+    )
+    mk = app.main_menu_keyboard("en").keyboard
+    check("main ReplyKeyboard stays 3x2 (support is inline-only)", len(mk) == 3 and all(len(r) == 2 for r in mk))
+
+    for cmd_text in ("/settings", "/profile"):
+        await say(dp, bot, cmd_text, uid=200)
+        flat = [b.callback_data for r in sess.sent()[-1].reply_markup.inline_keyboard for b in r]
+        check(f"{cmd_text} shows the 🆘 Support / Report Bug inline button", "support:start" in flat)
+
+    def to_admin():
+        return [m for m in sess.sent() if m.chat_id == 777]
+
+    # 6a. Text report
+    await say(dp, bot, "/support", uid=200)
+    prompt = sess.sent()[-1]
+    check(
+        "/support asks for the report with a localized Cancel button",
+        isinstance(prompt.reply_markup, InlineKeyboardMarkup)
+        and prompt.reply_markup.inline_keyboard[0][0].callback_data == "support:cancel",
+    )
+    n_admin = len(to_admin())
+    await say(dp, bot, "The scan button crashes on my phone <help>", uid=200)
+    relay = to_admin()[-1]
+    check(
+        "text report relayed to ADMIN_ID with name, @username, id, language & escaped body",
+        len(to_admin()) == n_admin + 1
+        and "Alice" in relay.text and "@referee200" in relay.text and "<code>200</code>" in relay.text
+        and "EN" in relay.text and "crashes on my phone &lt;help&gt;" in relay.text and valid_html(relay.text),
+    )
+    check(
+        "relay carries the ↩️ Reply to user button (admin_reply:200)",
+        relay.reply_markup.inline_keyboard[0][0].callback_data == "admin_reply:200",
+    )
+    confirmation = sess.sent()[-1]
+    check(
+        "user gets a localized confirmation that does not reveal the admin",
+        confirmation.chat_id == 200 and "sent to support" in confirmation.text and "777" not in confirmation.text,
+    )
+    n_admin = len(to_admin())
+    await say(dp, bot, "hello there!", uid=200)
+    check("FSM exited immediately (second message is not forwarded)", len(to_admin()) == n_admin)
+
+    # 6b. Photo report (must never be treated as a cosmetic scan)
+    await tap(dp, bot, "support:start", uid=200)
+    check("🆘 button starts the support flow", "Support" in sess.sent()[-1].text)
+    prof_before = await app.db_manager.get_profile(200)
+    await say(dp, bot, photo=True, caption="Layout is broken <here>", uid=200)
+    photos = sess.sent("SendPhoto")
+    check(
+        "photo report relayed via send_photo with caption, @username & Reply button",
+        len(photos) == 1 and photos[-1].chat_id == 777 and "Layout is broken &lt;here&gt;" in photos[-1].caption
+        and "@referee200" in photos[-1].caption and valid_html(photos[-1].caption)
+        and photos[-1].reply_markup.inline_keyboard[0][0].callback_data == "admin_reply:200",
+    )
+    prof_after = await app.db_manager.get_profile(200)
+    check(
+        "support photo is not scanned (no quota used, no scan history)",
+        prof_before["daily_scans"] == prof_after["daily_scans"]
+        and prof_before["bonus_scans"] == prof_after["bonus_scans"]
+        and prof_before["total_scans"] == prof_after["total_scans"],
+    )
+
+    # 6c. Cancel
+    await say(dp, bot, "/support", uid=200)
+    await tap(dp, bot, "support:cancel", uid=200)
+    n_admin = len(to_admin())
+    await say(dp, bot, "this should never be forwarded", uid=200)
+    check("Cancel leaves the support state (nothing forwarded)", len(to_admin()) == n_admin)
+
+    # 6d. Admin reply flow
+    n_all = len(sess.sent())
+    await tap(dp, bot, "admin_reply:200", uid=200)
+    check("non-admin cannot trigger admin_reply", len(sess.sent()) == n_all)
+
+    await tap(dp, bot, "admin_reply:200", uid=777)
+    check(
+        "admin_reply asks the admin for the reply with a Cancel button",
+        "200" in sess.sent()[-1].text and sess.sent()[-1].reply_markup.inline_keyboard[0][0].callback_data == "admin:cancel",
+    )
+    await say(dp, bot, "We fixed it, please update <now>", uid=777)
+    reply = [m for m in sess.sent() if m.chat_id == 200][-1]
+    check(
+        "admin reply delivered to the user with localized header & escaped text",
+        "Support reply" in reply.text and "We fixed it, please update &lt;now&gt;" in reply.text,
+    )
+    check(
+        "admin receives a delivery confirmation",
+        sess.sent()[-1].chat_id == 777 and "delivered" in sess.sent()[-1].text,
+    )
+
+    sess.blocked_users.add(200)
+    await tap(dp, bot, "admin_reply:200", uid=777)
+    await say(dp, bot, "Are you there?", uid=777)
+    check(
+        "blocked user handled cleanly (admin informed, no crash)",
+        sess.sent()[-1].chat_id == 777 and "Could not deliver" in sess.sent()[-1].text,
+    )
+    sess.blocked_users.discard(200)
+
+    app.ADMIN_ID = None
+    await say(dp, bot, "/support", uid=200)
+    check("support reports 'unavailable' when ADMIN_ID is not configured", "unavailable" in sess.sent()[-1].text)
+    app.ADMIN_ID = 777
+
+    # 7. Cloud deployment readiness
+    procfile = os.path.join(ROOT, "Procfile")
+    check(
+        "Procfile defines 'worker: python bot.py'",
+        os.path.isfile(procfile) and open(procfile, encoding="utf-8").read().strip() == "worker: python bot.py",
+    )
+    env_example = open(os.path.join(ROOT, ".env.example"), encoding="utf-8").read()
+    check(
+        ".env.example documents DB_PATH and TZ (commented)",
+        "# DB_PATH=/data/ingredients.db" in env_example and "# TZ=Europe/Bucharest" in env_example,
+    )
+    saved_db_path = os.environ.pop("DB_PATH", None)
+    tmp_root = tempfile.mkdtemp(prefix="scanner_dbpath_")
+    nested = os.path.join(tmp_root, "nested", "data", "custom.db")
+    try:
+        check("DB_PATH defaults to ingredients.db", database.DatabaseManager().db_path == "ingredients.db")
+        os.environ["DB_PATH"] = nested
+        dm = database.DatabaseManager()
+        check("DB_PATH env var is honoured", dm.db_path == nested)
+        check("parent directory does not exist before init", not os.path.isdir(os.path.dirname(nested)))
+        await dm.init_db()
+        check("init_db creates the parent directory and the database file", os.path.isfile(nested))
+        await dm.touch_user(1, "cloud", "Cloud")
+        check("custom DB_PATH database is fully functional", (await dm.get_user(1)) is not None)
+    finally:
+        os.environ.pop("DB_PATH", None)
+        if saved_db_path is not None:
+            os.environ["DB_PATH"] = saved_db_path
+        shutil.rmtree(tmp_root, ignore_errors=True)
 
     await bot.session.close()
     print("FAILED:", check.failed)

@@ -36,7 +36,10 @@ This project solves both problems by separating **LLM extraction/classification*
 - **Zero-Downtime `aiosqlite` Migrations & Interactive `/admin` Panel:**
   - `DatabaseManager.init_db()` inspects `PRAGMA table_info(...)` on startup and executes safe `ALTER TABLE ... ADD COLUMN` migrations in place.
   - Role-guarded `/admin` dashboard featuring **📊 Detailed Stats**, **🕵️ Recent Scans**, **📥 Export DB (CSV)** (`users.csv` and `scans.csv` encoded in-memory with `utf-8-sig` BOM for clean Excel rendering of Romanian/Cyrillic text), **🎁 Give Bonus Scans** (by `user_id` or `@username`), and rate-limited **📢 Broadcast** with `TelegramForbiddenError` handling.
-- **48-Assertion Automated Test Suite (`test_upgrade.py`):**
+- **Anonymous Support Relay & Cloud-Ready Deployment:**
+  - `/support` (and an inline `🆘` button in `/settings` & `/profile`) relays text or screenshots to the admin with an `↩️ Reply to user` button, keeping the admin's identity hidden from users; blocked users never crash the reply flow.
+  - `DB_PATH` / `TZ` environment variables and a `Procfile` (`worker: python bot.py`) make the bot deployable on any worker-style PaaS with a persistent volume.
+- **74-Assertion Automated Test Suite (`test_upgrade.py`):**
   - End-to-end tests driving the real `aiogram.Dispatcher` and `aiosqlite` database with mocked OpenAI and Telegram sessions at zero API cost.
 
 ---
@@ -49,8 +52,9 @@ scanner_project/
 ├── analyzer.py        # OpenAI Vision/Text prompts, deterministic rubric, regex rules & follow-ups
 ├── database.py        # Async SQLite manager, in-place schema migrations, quotas, referrals & exports
 ├── texts.py           # Strict 4-language localization dictionary (English, Romanian, Russian, Ukrainian)
-├── test_upgrade.py    # 48-assertion automated end-to-end test suite (offline, zero token cost)
+├── test_upgrade.py    # 74-assertion automated end-to-end test suite (offline, zero token cost)
 ├── assets/            # Telegram UI screenshots for portfolio showcase
+├── Procfile           # Cloud worker definition (`worker: python bot.py`)
 ├── requirements.txt   # Production Python dependencies
 ├── .env.example       # Template for required environment variables
 └── .gitignore         # Excludes secrets (.env), virtualenvs, and local SQLite databases (*.db)
@@ -116,4 +120,4 @@ The test suite runs against an isolated temporary SQLite database and mocks all 
 python test_upgrade.py
 ```
 
-Expected output: **48 `PASS` assertions and `FAILED: 0`**.
+Expected output: **74 `PASS` assertions and `FAILED: 0`**.

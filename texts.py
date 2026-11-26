@@ -36,7 +36,7 @@ TEXTS = {
             "1️⃣ Send a clear photo of the ingredient list (INCI) <b>or paste the INCI text</b> from any online store.\n"
             "2️⃣ I check every ingredient against EU/Romanian regulations, your allergies, and your safety modes.\n"
             "3️⃣ You get a traffic light 🟢🟡🔴, a score out of 100, and a full breakdown.\n\n"
-            "/start – restart setup\n/profile – profile, limits & referrals\n/compare – compare 2 products\n/history – scan history\n/buy – buy bonus scans\n/settings – language, allergies & safety modes"
+            "/start – restart setup\n/profile – profile, limits & referrals\n/compare – compare 2 products\n/history – scan history\n/buy – buy bonus scans\n/settings – language, allergies & safety modes\n/support – contact support"
         ),
         "too_long": "⚠️ That's too long. Please keep it under {n} characters.",
         "send_text": "✍️ Please type your allergies as text, or type <b>None</b>.",
@@ -170,6 +170,19 @@ TEXTS = {
         "ref_reward_referee": "🎁 <b>Referral bonus!</b> You completed your first scan and received <b>+{n} bonus scans</b>!",
         "ref_reward_referrer": "🎉 <b>Referral reward!</b> Your invited friend completed their first scan — you received <b>+{n} bonus scans</b>!",
         "bonus_gift_notify": "🎁 <b>You received +{amount} bonus scans!</b>\n⭐ New bonus balance: <b>{balance}</b>",
+        "btn_support": "🆘 Support / Report Bug",
+        "cmd_support": "Contact support / report a bug",
+        "support_prompt": (
+            "🆘 <b>Support / Report a bug</b>\n\n"
+            "Describe the problem or your question. You can send <b>text</b> or a <b>screenshot</b> (photo with an optional caption).\n"
+            "Tap <b>Cancel</b> to go back."
+        ),
+        "support_sent": "✅ <b>Your message has been sent to support.</b>\nWe'll reply to you right here.",
+        "support_error": "❌ Could not send your message right now. Please try again later with /support.",
+        "support_unavailable": "ℹ️ Support is currently unavailable. Please try again later.",
+        "support_cancelled": "✅ Support request cancelled.",
+        "support_send_text": "✍️ Please send your message as text or a photo (with an optional caption), or tap <b>Cancel</b>.",
+        "support_reply_header": "💬 <b>Support reply:</b>",
     },
     "ro": {
         "choose_language": "🌍 <b>Bun venit!</b>\nAlege limba ta:",
@@ -205,7 +218,7 @@ TEXTS = {
             "1️⃣ Trimite o fotografie clară a listei de ingrediente (INCI) <b>sau lipește textul INCI</b> de pe orice magazin online.\n"
             "2️⃣ Verific fiecare ingredient conform reglementărilor UE/României, alergiilor și modurilor tale de siguranță.\n"
             "3️⃣ Primești un semafor 🟢🟡🔴, un scor din 100 și o analiză completă.\n\n"
-            "/start – reia configurarea\n/profile – profil, limite și recomandări\n/compare – compară 2 produse\n/history – istoric scanări\n/buy – cumpără scanări bonus\n/settings – limbă, alergii și moduri"
+            "/start – reia configurarea\n/profile – profil, limite și recomandări\n/compare – compară 2 produse\n/history – istoric scanări\n/buy – cumpără scanări bonus\n/settings – limbă, alergii și moduri\n/support – contactează suportul"
         ),
         "too_long": "⚠️ Textul este prea lung. Maximum {n} de caractere.",
         "send_text": "✍️ Scrie alergiile ca text sau scrie <b>Nu</b>.",
@@ -339,6 +352,19 @@ TEXTS = {
         "ref_reward_referee": "🎁 <b>Bonus de recomandare!</b> Ai finalizat prima scanare și ai primit <b>+{n} scanări bonus</b>!",
         "ref_reward_referrer": "🎉 <b>Recompensă de recomandare!</b> Prietenul invitat a finalizat prima scanare — ai primit <b>+{n} scanări bonus</b>!",
         "bonus_gift_notify": "🎁 <b>Ai primit +{amount} scanări bonus!</b>\n⭐ Sold nou bonus: <b>{balance}</b>",
+        "btn_support": "🆘 Suport / Raportează o problemă",
+        "cmd_support": "Contactează suportul / raportează o eroare",
+        "support_prompt": (
+            "🆘 <b>Suport / Raportează o problemă</b>\n\n"
+            "Descrie problema sau întrebarea ta. Poți trimite <b>text</b> sau o <b>captură de ecran</b> (fotografie cu descriere opțională).\n"
+            "Apasă <b>Anulează</b> pentru a reveni."
+        ),
+        "support_sent": "✅ <b>Mesajul tău a fost trimis echipei de suport.</b>\nÎți vom răspunde chiar aici.",
+        "support_error": "❌ Nu am putut trimite mesajul acum. Te rog să încerci mai târziu cu /support.",
+        "support_unavailable": "ℹ️ Suportul nu este disponibil momentan. Te rog să încerci mai târziu.",
+        "support_cancelled": "✅ Solicitarea către suport a fost anulată.",
+        "support_send_text": "✍️ Te rog să trimiți mesajul ca text sau fotografie (cu descriere opțională) ori să apeși <b>Anulează</b>.",
+        "support_reply_header": "💬 <b>Răspuns de la suport:</b>",
     },
     "ru": {
         "choose_language": "🌍 <b>Добро пожаловать!</b>\nВыберите язык:",
@@ -374,7 +400,7 @@ TEXTS = {
             "1️⃣ Отправьте чёткое фото состава (INCI) <b>или вставьте текст состава</b> из любого интернет-магазина.\n"
             "2️⃣ Я проверяю каждый ингредиент по нормам ЕС/Румынии, вашим аллергиям и режимам безопасности.\n"
             "3️⃣ Вы получите светофор 🟢🟡🔴, оценку из 100 и полный разбор.\n\n"
-            "/start – начать заново\n/profile – профиль, лимиты и рефералы\n/compare – сравнить 2 продукта\n/history – история\n/buy – купить бонусные сканы\n/settings – язык, аллергии и режимы"
+            "/start – начать заново\n/profile – профиль, лимиты и рефералы\n/compare – сравнить 2 продукта\n/history – история\n/buy – купить бонусные сканы\n/settings – язык, аллергии и режимы\n/support – связаться с поддержкой"
         ),
         "too_long": "⚠️ Слишком длинно. Максимум {n} символов.",
         "send_text": "✍️ Напишите аллергии текстом или напишите <b>Нет</b>.",
@@ -508,6 +534,19 @@ TEXTS = {
         "ref_reward_referee": "🎁 <b>Реферальный бонус!</b> Вы выполнили первое сканирование и получили <b>+{n} бонусных сканов</b>!",
         "ref_reward_referrer": "🎉 <b>Реферальная награда!</b> Приглашённый друг выполнил первое сканирование — вам начислено <b>+{n} бонусных сканов</b>!",
         "bonus_gift_notify": "🎁 <b>Вам начислено +{amount} бонусных сканов!</b>\n⭐ Новый бонусный баланс: <b>{balance}</b>",
+        "btn_support": "🆘 Поддержка / Сообщить об ошибке",
+        "cmd_support": "Связаться с поддержкой / сообщить об ошибке",
+        "support_prompt": (
+            "🆘 <b>Поддержка / Сообщить об ошибке</b>\n\n"
+            "Опишите проблему или вопрос. Можно отправить <b>текст</b> или <b>скриншот</b> (фото с необязательной подписью).\n"
+            "Нажмите <b>Отмена</b>, чтобы вернуться."
+        ),
+        "support_sent": "✅ <b>Ваше сообщение отправлено в поддержку.</b>\nМы ответим вам прямо здесь.",
+        "support_error": "❌ Не удалось отправить сообщение. Пожалуйста, попробуйте позже через /support.",
+        "support_unavailable": "ℹ️ Поддержка сейчас недоступна. Пожалуйста, попробуйте позже.",
+        "support_cancelled": "✅ Обращение в поддержку отменено.",
+        "support_send_text": "✍️ Пожалуйста, отправьте сообщение текстом или фото (с необязательной подписью) либо нажмите <b>Отмена</b>.",
+        "support_reply_header": "💬 <b>Ответ поддержки:</b>",
     },
     "uk": {
         "choose_language": "🌍 <b>Ласкаво просимо!</b>\nОберіть мову:",
@@ -543,7 +582,7 @@ TEXTS = {
             "1️⃣ Надішліть чітке фото складу (INCI) <b>або вставте текст складу</b> з будь-якого інтернет-магазину.\n"
             "2️⃣ Я перевіряю кожен інгредієнт за нормами ЄС/Румунії, вашими алергіями та режимами безпеки.\n"
             "3️⃣ Ви отримаєте світлофор 🟢🟡🔴, оцінку зі 100 та повний розбір.\n\n"
-            "/start – почати заново\n/profile – профіль, ліміти та реферали\n/compare – порівняти 2 продукти\n/history – історія\n/buy – купити бонусні скани\n/settings – мова, алергії та режими"
+            "/start – почати заново\n/profile – профіль, ліміти та реферали\n/compare – порівняти 2 продукти\n/history – історія\n/buy – купити бонусні скани\n/settings – мова, алергії та режими\n/support – звернутися до підтримки"
         ),
         "too_long": "⚠️ Занадто довго. Максимум {n} символів.",
         "send_text": "✍️ Напишіть алергії текстом або напишіть <b>Ні</b>.",
@@ -677,5 +716,18 @@ TEXTS = {
         "ref_reward_referee": "🎁 <b>Реферальний бонус!</b> Ви виконали перше сканування та отримали <b>+{n} бонусних сканів</b>!",
         "ref_reward_referrer": "🎉 <b>Реферальна нагорода!</b> Запрошений друг виконав перше сканування — вам нараховано <b>+{n} бонусних сканів</b>!",
         "bonus_gift_notify": "🎁 <b>Вам нараховано +{amount} бонусних сканів!</b>\n⭐ Новий бонусний баланс: <b>{balance}</b>",
+        "btn_support": "🆘 Підтримка / Повідомити про помилку",
+        "cmd_support": "Звернутися до підтримки / повідомити про помилку",
+        "support_prompt": (
+            "🆘 <b>Підтримка / Повідомити про помилку</b>\n\n"
+            "Опишіть проблему або запитання. Можна надіслати <b>текст</b> або <b>скріншот</b> (фото з необов'язковим підписом).\n"
+            "Натисніть <b>Скасувати</b>, щоб повернутися."
+        ),
+        "support_sent": "✅ <b>Ваше повідомлення надіслано до підтримки.</b>\nМи відповімо вам прямо тут.",
+        "support_error": "❌ Не вдалося надіслати повідомлення. Будь ласка, спробуйте пізніше через /support.",
+        "support_unavailable": "ℹ️ Підтримка зараз недоступна. Будь ласка, спробуйте пізніше.",
+        "support_cancelled": "✅ Звернення до підтримки скасовано.",
+        "support_send_text": "✍️ Будь ласка, надішліть повідомлення текстом або фото (з необов'язковим підписом) чи натисніть <b>Скасувати</b>.",
+        "support_reply_header": "💬 <b>Відповідь підтримки:</b>",
     },
 }

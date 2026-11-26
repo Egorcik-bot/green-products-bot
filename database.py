@@ -1,4 +1,5 @@
 import logging
+import os
 import sqlite3
 from datetime import date
 from typing import Optional
@@ -45,14 +46,17 @@ def _today() -> str:
 
 
 class DatabaseManager:
-    def __init__(self, db_path: str = "ingredients.db"):
-        self.db_path = db_path
+    def __init__(self, db_path: Optional[str] = None):
+        # Cloud deployments point DB_PATH at a persistent volume (e.g. /data/ingredients.db).
+        self.db_path = db_path or os.getenv("DB_PATH") or "ingredients.db"
 
     # -----------------------------------------------------
     # Schema & migrations
     # -----------------------------------------------------
     async def init_db(self):
         """Creates tables if missing and migrates existing ones in place."""
+        parent = os.path.dirname(os.path.abspath(self.db_path))
+        os.makedirs(parent, exist_ok=True)  # e.g. a freshly mounted /data volume
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS scanned_products (
