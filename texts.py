@@ -183,6 +183,9 @@ TEXTS = {
         "support_cancelled": "✅ Support request cancelled.",
         "support_send_text": "✍️ Please send your message as text or a photo (with an optional caption), or tap <b>Cancel</b>.",
         "support_reply_header": "💬 <b>Support reply:</b>",
+        "rule_sulfate_mild": "Mild wash-off sulfate surfactant (may dry very sensitive skin).",
+        "rule_preservative_mild": "Mild preservative / declarable fragrance allergen (rarely irritating).",
+        "rule_isothiazolinone": "Isothiazolinone preservative (strong contact allergen, restricted in the EU).",
     },
     "ro": {
         "choose_language": "🌍 <b>Bun venit!</b>\nAlege limba ta:",
@@ -365,6 +368,9 @@ TEXTS = {
         "support_cancelled": "✅ Solicitarea către suport a fost anulată.",
         "support_send_text": "✍️ Te rog să trimiți mesajul ca text sau fotografie (cu descriere opțională) ori să apeși <b>Anulează</b>.",
         "support_reply_header": "💬 <b>Răspuns de la suport:</b>",
+        "rule_sulfate_mild": "Surfactant sulfat blând, cu clătire (poate usca pielea foarte sensibilă).",
+        "rule_preservative_mild": "Conservant blând / alergen declarabil din parfum (rareori iritant).",
+        "rule_isothiazolinone": "Conservant izotiazolinonă (alergen de contact puternic, restricționat în UE).",
     },
     "ru": {
         "choose_language": "🌍 <b>Добро пожаловать!</b>\nВыберите язык:",
@@ -547,6 +553,9 @@ TEXTS = {
         "support_cancelled": "✅ Обращение в поддержку отменено.",
         "support_send_text": "✍️ Пожалуйста, отправьте сообщение текстом или фото (с необязательной подписью) либо нажмите <b>Отмена</b>.",
         "support_reply_header": "💬 <b>Ответ поддержки:</b>",
+        "rule_sulfate_mild": "Мягкий смываемый сульфатный ПАВ (может сушить очень чувствительную кожу).",
+        "rule_preservative_mild": "Мягкий консервант / декларируемый аллерген отдушек (редко раздражает).",
+        "rule_isothiazolinone": "Консервант изотиазолинон (сильный контактный аллерген, ограничен в ЕС).",
     },
     "uk": {
         "choose_language": "🌍 <b>Ласкаво просимо!</b>\nОберіть мову:",
@@ -729,5 +738,8 @@ TEXTS = {
         "support_cancelled": "✅ Звернення до підтримки скасовано.",
         "support_send_text": "✍️ Будь ласка, надішліть повідомлення текстом або фото (з необов'язковим підписом) чи натисніть <b>Скасувати</b>.",
         "support_reply_header": "💬 <b>Відповідь підтримки:</b>",
+        "rule_sulfate_mild": "М'який змивний сульфатний ПАР (може пересушувати дуже чутливу шкіру).",
+        "rule_preservative_mild": "М'який консервант / декларований алерген ароматизаторів (рідко подразнює).",
+        "rule_isothiazolinone": "Консервант ізотіазолінон (сильний контактний алерген, обмежений у ЄС).",
     },
 }

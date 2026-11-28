@@ -19,7 +19,7 @@ This project solves both problems by separating **LLM extraction/classification*
 - **Deterministic Python Scoring Engine (`analyzer.py`):**
   - OpenAI Vision (`gpt-4o`) and Text (`gpt-4o-mini`) calls run at `temperature=0`, `seed=7` and only transcribe and classify visible ingredients—they never invent the final score or guess product names.
   - A compiled regex rule table pins EU-restricted substances, formaldehyde releasers, chemical UV filters (`Homosalate`, `Octocrylene`, `Oxybenzone`), `BHT`/`BHA`, aluminum salts, sulfates, drying alcohols, PEGs, parabens, microplastics, and petrochemicals to fixed point deductions.
-  - Group deduction caps (**`-20` max** across `Parfum` + all EU declarable fragrance allergens; **`-15` max** across PEG compounds) and a **sanity floor (`55/100 Yellow`)** prevent products with zero Red ingredients from being falsely marked High Risk.
+  - Calibrated rubric: a safe-ingredient list (Phenoxyethanol, Glycerin, Citric Acid, EDTA, …) can never be penalised; controversial ingredients (BHT/BHA, triclosan, MIT/CMIT, formaldehyde releasers, oxybenzone, butyl/propylparaben) are forced **Red**; mild items are capped (SLES `-5`, Benzyl Alcohol `-3`, PEG `-5` each). Group caps (**`-10` max** for `Parfum` + fragrance allergens, **`-10` max** for PEGs), a **`45` sanity floor** (lifted at 5+ Yellow ingredients) and a "any Red keeps it out of Green" ceiling keep scores fair. Thresholds: **75–100 Green, 50–74 Yellow, 0–49 Red**.
 - **Personalized Safety Modes & Allergy Matching:**
   - Per-user toggles for **🤰 Pregnancy / Breastfeeding Safe** (flags retinoids—while excluding *Bakuchiol*—salicylic acid, hydroquinone, oxybenzone, and formaldehyde releasers as **Red `-25`**, bypassing the Yellow floor), **🫧 Acne-Prone (Comedogenic Check)**, and **🌿 Sulfate & Silicone Free**, alongside custom free-text allergy matching.
 - **Multilingual Async Architecture (`aiogram 3.x`):**
@@ -39,7 +39,7 @@ This project solves both problems by separating **LLM extraction/classification*
 - **Anonymous Support Relay & Cloud-Ready Deployment:**
   - `/support` (and an inline `🆘` button in `/settings` & `/profile`) relays text or screenshots to the admin with an `↩️ Reply to user` button, keeping the admin's identity hidden from users; blocked users never crash the reply flow.
   - `DB_PATH` / `TZ` environment variables and a `Procfile` (`worker: python bot.py`) make the bot deployable on any worker-style PaaS with a persistent volume.
-- **74-Assertion Automated Test Suite (`test_upgrade.py`):**
+- **90-Assertion Automated Test Suite (`test_upgrade.py`):**
   - End-to-end tests driving the real `aiogram.Dispatcher` and `aiosqlite` database with mocked OpenAI and Telegram sessions at zero API cost.
 
 ---
@@ -52,7 +52,7 @@ scanner_project/
 ├── analyzer.py        # OpenAI Vision/Text prompts, deterministic rubric, regex rules & follow-ups
 ├── database.py        # Async SQLite manager, in-place schema migrations, quotas, referrals & exports
 ├── texts.py           # Strict 4-language localization dictionary (English, Romanian, Russian, Ukrainian)
-├── test_upgrade.py    # 74-assertion automated end-to-end test suite (offline, zero token cost)
+├── test_upgrade.py    # 90-assertion automated end-to-end test suite (offline, zero token cost)
 ├── assets/            # Telegram UI screenshots for portfolio showcase
 ├── Procfile           # Cloud worker definition (`worker: python bot.py`)
 ├── requirements.txt   # Production Python dependencies
@@ -120,4 +120,4 @@ The test suite runs against an isolated temporary SQLite database and mocks all 
 python test_upgrade.py
 ```
 
-Expected output: **74 `PASS` assertions and `FAILED: 0`**.
+Expected output: **90 `PASS` assertions and `FAILED: 0`**.

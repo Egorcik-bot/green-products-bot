@@ -1,5 +1,5 @@
 """
-Automated 74-assertion end-to-end test suite for the Ingredient Scanner Telegram Bot.
+Automated 90-assertion end-to-end test suite for the Ingredient Scanner Telegram Bot.
 Mocks OpenAI and Telegram Bot API sessions so all tests run offline at zero token cost.
 
 Run with:
@@ -244,8 +244,8 @@ async def main():
     }
     ev_no_preg = analyzer.evaluate(preg_formula, "en", "", {"mode_pregnancy": False})
     ev_preg = analyzer.evaluate(preg_formula, "en", "", {"mode_pregnancy": True})
-    check("without pregnancy mode: 61 Yellow", ev_no_preg["score"] == 61 and ev_no_preg["traffic_light"] == "yellow")
-    check("with pregnancy mode: Retinol -> Red (-25), score 36 Red (bypasses 55 floor)", ev_preg["score"] == 36 and ev_preg["traffic_light"] == "red")
+    check("without pregnancy mode: 70 Yellow (Parfum now -6)", ev_no_preg["score"] == 70 and ev_no_preg["traffic_light"] == "yellow")
+    check("with pregnancy mode: Retinol -> Red (-25), strict fragrance, score 36 Red (bypasses the Yellow floor)", ev_preg["score"] == 36 and ev_preg["traffic_light"] == "red")
     check("Bakuchiol stays green in pregnancy mode", next(i for i in ev_preg["items"] if i["name"] == "Bakuchiol")["level"] == "green")
     rep_preg, _ = app.format_report(ev_preg, "en")
     check("pregnancy Red trigger appears in blockquote alert box", "<blockquote>" in rep_preg and "Retinol" in rep_preg.split("</blockquote>")[0] and valid_html(rep_preg))
@@ -273,6 +273,110 @@ async def main():
     }
     ev_hair = analyzer.evaluate(hair_formula, "ru", "", {"mode_hair_clean": True})
     check("mode_hair_clean flags SLES & Dimethicone (-10 each -> 80)", ev_hair["score"] == 80 and all(i["level"] == "yellow" for i in ev_hair["items"][1:]))
+
+    # 4d. Recalibrated rubric: Python rules are authoritative for known ingredients
+    def mk(*names, level="green", penalty=0):
+        return {
+            "no_ingredients_found": False,
+            "verdict": "x",
+            "ingredients": [{"name": n, "level": level, "penalty": penalty, "note": "model note"} for n in names],
+        }
+
+    check(
+        "thresholds: 75-100 Green, 50-74 Yellow, 0-49 Red",
+        analyzer.GREEN_MIN_SCORE == 75 and analyzer.light_for(75) == "green" and analyzer.light_for(74) == "yellow"
+        and analyzer.light_for(50) == "yellow" and analyzer.light_for(49) == "red",
+    )
+    check(
+        "constants: FRAGRANCE_CAP=10, PEG_CAP=10, YELLOW_FLOOR_SCORE=45",
+        analyzer.FRAGRANCE_CAP == 10 and analyzer.PEG_CAP == 10 and analyzer.YELLOW_FLOOR_SCORE == 45,
+    )
+
+    safe_names = [
+        "Phenoxyethanol", "Sodium Benzoate", "Potassium Sorbate", "Propylene Glycol", "Butylene Glycol",
+        "Sodium Hydroxide", "Citric Acid", "Disodium EDTA", "Tetrasodium EDTA", "Tocopherol", "Glycerin",
+    ]
+    ev_safe = analyzer.evaluate(mk(*safe_names, level="yellow", penalty=10), "en")
+    check(
+        "safe/mild list is forced GREEN (0) even when the model says yellow -10",
+        ev_safe["score"] == 100 and all(i["level"] == "green" and i["penalty"] == 0 for i in ev_safe["items"]),
+    )
+    ev_safe_allergy = analyzer.evaluate(mk("Phenoxyethanol", "Aqua"), "en", "phenoxyethanol")
+    check(
+        "safe-list ingredient becomes Red (-25) when the user declared that allergy",
+        ev_safe_allergy["items"][0]["level"] == "red" and ev_safe_allergy["items"][0]["user_allergy"]
+        and ev_safe_allergy["items"][0]["penalty"] == 25,
+    )
+
+    check(
+        "SLES capped at -5 (model said -15), harsh SLS stays -10",
+        analyzer.evaluate(mk("Sodium Laureth Sulfate", level="yellow", penalty=15), "en")["score"] == 95
+        and analyzer.evaluate(mk("Sodium Lauryl Sulfate"), "en")["score"] == 90,
+    )
+    check(
+        "Benzyl Alcohol max -3",
+        analyzer.evaluate(mk("Benzyl Alcohol", level="yellow", penalty=10), "en")["score"] == 97,
+    )
+    ev_peg3 = analyzer.evaluate(mk("PEG-40 Hydrogenated Castor Oil", "PEG-100 Stearate", "PEG-8"), "en")
+    check(
+        "PEG -5 each, group capped at -10",
+        [i["penalty"] for i in ev_peg3["items"]] == [5, 5, 5] and ev_peg3["score"] == 90,
+    )
+    check(
+        "unknown ingredient flagged yellow by the model is clamped to -8",
+        analyzer.evaluate(mk("Unobtainium Extract", level="yellow", penalty=15), "en")["items"][0]["penalty"] == 8,
+    )
+
+    frag = mk("Aqua", "Parfum", "Limonene", "Linalool", "Citral", "Coumarin", "Geraniol", "Citronellol", "Eugenol")
+    ev_frag = analyzer.evaluate(frag, "en")
+    frag_by_name = {i["name"]: i for i in ev_frag["items"]}
+    check(
+        "fragrance softened: Parfum -6, allergens -2 each, group cap -10 -> 90 Green",
+        frag_by_name["Parfum"]["penalty"] == 6 and frag_by_name["Limonene"]["penalty"] == 2
+        and ev_frag["score"] == 90 and ev_frag["traffic_light"] == "green",
+    )
+    ev_frag_acne = analyzer.evaluate(frag, "en", "", {"mode_acne": True})
+    frag_acne = {i["name"]: i for i in ev_frag_acne["items"]}
+    check(
+        "acne mode keeps strict fragrance (Parfum -15, allergens -4, cap -20 -> 80)",
+        frag_acne["Parfum"]["penalty"] == 15 and frag_acne["Limonene"]["penalty"] == 4 and ev_frag_acne["score"] == 80,
+    )
+    check(
+        "pregnancy mode keeps strict fragrance (cap -20 -> 80)",
+        analyzer.evaluate(frag, "en", "", {"mode_pregnancy": True})["score"] == 80,
+    )
+    ev_frag_allergy = analyzer.evaluate(frag, "en", "fragrance")
+    parfum_item = next(i for i in ev_frag_allergy["items"] if i["name"] == "Parfum")
+    check(
+        "personal fragrance allergy makes Parfum Red (-25)",
+        parfum_item["level"] == "red" and parfum_item["user_allergy"] and parfum_item["penalty"] == 25,
+    )
+
+    red_expected = {
+        "BHT": 20, "BHA": 20, "Triclosan": 25, "Methylisothiazolinone": 25, "Methylchloroisothiazolinone": 25,
+        "DMDM Hydantoin": 25, "Imidazolidinyl Urea": 25, "Diazolidinyl Urea": 25, "Oxybenzone": 25,
+        "Butylparaben": 20, "Propylparaben": 20,
+    }
+    red_items = {n: analyzer.evaluate(mk(n), "en")["items"][0] for n in red_expected}
+    check(
+        "controversial ingredients forced RED (-20/-25) even when the model says green",
+        all(red_items[n]["level"] == "red" and red_items[n]["penalty"] == p for n, p in red_expected.items()),
+    )
+    ev_three_reds = analyzer.evaluate(mk("BHT", "Butylparaben", "Propylparaben", "Aqua"), "en")
+    check("three -20 reds pull the score into Red (40)", ev_three_reds["score"] == 40 and ev_three_reds["traffic_light"] == "red")
+    ev_one_red = analyzer.evaluate(mk("DMDM Hydantoin", "Aqua", "Glycerin"), "en")
+    check(
+        "a single Red ingredient can never leave the product Green (capped at 74)",
+        ev_one_red["score"] == 74 and ev_one_red["traffic_light"] == "yellow",
+    )
+    ev_six_yellow = analyzer.evaluate(
+        mk("Homosalate", "Octocrylene", "Sodium Lauryl Sulfate", "Alcohol Denat.", "Aluminum Chlorohydrate", "Mineral Oil", "Aqua"),
+        "en",
+    )
+    check(
+        "5+ yellow ingredients lift the floor: heavily loaded formula drops into Red (41)",
+        ev_six_yellow["score"] == 41 and ev_six_yellow["traffic_light"] == "red",
+    )
 
     # 5. End-to-end Telegram Bot flows via Dispatcher
     sess = FakeSession()
